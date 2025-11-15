@@ -8,6 +8,9 @@ const PORT = Number(process.env.WS_PORT || 8080);
 const PER_RIDER_TIMEOUT_MS = 10_000;
 const TOTAL_ASSIGNMENT_WINDOW_MS = 60_000;
 const ACTIVE_RIDER_WINDOW_MS = 2 * 60_000;
+const PROCESS_POLL_INTERVAL_MS = 3_000; // background poll cadence
+const WS_READY_OPEN = 1;
+const HEARTBEAT_INTERVAL_MS = 5_000;
 
 // Initialize Firebase Admin using Application Default Credentials.
 // Make sure you have GOOGLE_APPLICATION_CREDENTIALS pointing to your service account JSON
@@ -107,6 +110,188 @@ async function persistRideRequest(msg: RideRequestIncoming) {
 
   await docRef.set(payload);
   return docRef.id;
+}
+
+// Track requests currently being processed to avoid duplicate concurrent runs
+const inFlightRequests = new Set<string>();
+
+// Track which websocket initiated which request so we can push live distance updates
+const requestIdToClients = new Map<string, Set<any>>();
+const wsToRequestIds = new Map<any, Set<string>>();
+const activeDistanceStreams = new Map<
+  string,
+  { stop: () => void; riderId: string }
+>();
+
+function registerClientForRequest(requestId: string, ws: any) {
+  if (!requestIdToClients.has(requestId)) {
+    requestIdToClients.set(requestId, new Set());
+  }
+  requestIdToClients.get(requestId)!.add(ws);
+  if (!wsToRequestIds.has(ws)) wsToRequestIds.set(ws, new Set());
+  wsToRequestIds.get(ws)!.add(requestId);
+}
+
+function unregisterWs(ws: any) {
+  const reqs = wsToRequestIds.get(ws);
+  if (reqs) {
+    for (const rid of reqs) {
+      const set = requestIdToClients.get(rid);
+      if (set) {
+        set.delete(ws);
+        if (set.size === 0) {
+          requestIdToClients.delete(rid);
+          // If no more clients for this request, stop streaming distance
+          const active = activeDistanceStreams.get(rid);
+          if (active) {
+            active.stop();
+            activeDistanceStreams.delete(rid);
+          }
+        }
+      }
+    }
+    wsToRequestIds.delete(ws);
+  }
+}
+
+function sendDistanceToClients(requestId: string, distanceMeters: number) {
+  const clients = requestIdToClients.get(requestId);
+  if (!clients || clients.size === 0) return;
+  const payload = JSON.stringify({ message: Math.round(distanceMeters) });
+  try {
+    console.log("[ws] sending distance", {
+      requestId,
+      meters: Math.round(distanceMeters),
+      clients: clients.size,
+    });
+  } catch {}
+  for (const ws of clients) {
+    try {
+      if (ws.readyState === WS_READY_OPEN) {
+        ws.send(payload);
+      } else {
+        unregisterWs(ws);
+      }
+    } catch {
+      unregisterWs(ws);
+    }
+  }
+}
+
+function beginDistanceStreaming(
+  requestId: string,
+  riderId: string,
+  pickup: { lat: number; lng: number }
+) {
+  if (activeDistanceStreams.has(requestId)) return; // already streaming for this request
+  // If no clients are waiting for this request, skip
+  if (!requestIdToClients.has(requestId)) return;
+
+  const riderRef = db.collection("riders").doc(riderId);
+  const stateRef = db.collection("rider_state").doc(riderId);
+
+  const unsubRider = riderRef.onSnapshot((snap) => {
+    const data = snap.data() as any;
+    const loc = data?.location;
+    const lat = typeof loc?.latitude === "number" ? loc.latitude : undefined;
+    const lng = typeof loc?.longitude === "number" ? loc.longitude : undefined;
+    if (typeof lat === "number" && typeof lng === "number") {
+      const d = haversineMeters(lat, lng, pickup.lat, pickup.lng);
+      sendDistanceToClients(requestId, d);
+    }
+    // If all clients detached, stop streaming
+    const clients = requestIdToClients.get(requestId);
+    if (!clients || clients.size === 0) {
+      cleanup();
+    }
+  });
+
+  const unsubState = stateRef.onSnapshot((snap) => {
+    const st = snap.data() as any;
+    // Stop streaming if rider is no longer in pickup for this request
+    if (!st || st.state !== "pickup" || st.requestId !== requestId) {
+      cleanup();
+    }
+  });
+
+  function cleanup() {
+    try {
+      unsubRider();
+    } catch {}
+    try {
+      unsubState();
+    } catch {}
+    activeDistanceStreams.delete(requestId);
+  }
+
+  activeDistanceStreams.set(requestId, { stop: cleanup, riderId });
+}
+
+async function processActiveRequestsTick() {
+  const now = Date.now();
+  const snap = await db
+    .collection("ride_requests")
+    .where("state", "==", "active")
+    .get();
+  const ops: Promise<any>[] = [];
+  snap.forEach((docSnap) => {
+    const data = docSnap.data() as any;
+    const requestId: string = data?.requestId ?? docSnap.id;
+    // Timeout stale requests (> 1 minute old)
+    const tsMs: number =
+      data?.timestamp?.toMillis?.() ??
+      (data?.timestamp?.seconds ? data.timestamp.seconds * 1000 : now);
+    if (Number.isFinite(tsMs) && now - tsMs > 60_000) {
+      ops.push(
+        docSnap.ref.set(
+          {
+            state: "timeout",
+            timedOutAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        )
+      );
+      return;
+    }
+
+    // Start processing if not already in-flight
+    if (!inFlightRequests.has(requestId)) {
+      inFlightRequests.add(requestId);
+      const loc = data?.location;
+      const dest = data?.destination;
+      const ride = {
+        location: {
+          lat: loc?.latitude ?? 0,
+          lng: loc?.longitude ?? 0,
+        },
+        destination: {
+          lat: dest?.latitude ?? 0,
+          lng: dest?.longitude ?? 0,
+        },
+        timestampMs: tsMs || now,
+      };
+      // Fire-and-forget; ensure cleanup of inFlight flag
+      assignRideToNearestRiders(requestId, ride)
+        .catch((err) => {
+          console.error("[process] error for", requestId, err);
+        })
+        .finally(() => {
+          inFlightRequests.delete(requestId);
+        });
+    }
+  });
+  if (ops.length) {
+    await Promise.allSettled(ops);
+  }
+}
+
+function startProcessingLoop() {
+  // Kick off background polling loop; keep ticks independent
+  setInterval(() => {
+    processActiveRequestsTick().catch((err) => {
+      console.error("[process] tick error:", err);
+    });
+  }, PROCESS_POLL_INTERVAL_MS);
 }
 
 async function getNearestIdleRiders(origin: LatLng): Promise<RiderCandidate[]> {
@@ -491,6 +676,12 @@ async function assignRideToNearestRiders(
       })
     );
 
+    // Begin streaming real-time distance from rider to pickup to the client(s) who initiated the request
+    beginDistanceStreaming(requestId, accepted.riderId, {
+      lat: ride.location.lat,
+      lng: ride.location.lng,
+    });
+
     cleanup();
   });
 
@@ -550,6 +741,19 @@ wss.on("connection", (ws, req) => {
   const remote = req.socket.remoteAddress;
   console.log(`[ws] client connected ${remote}`);
 
+  // Per-connection heartbeat
+  const heartbeatId = setInterval(() => {
+    try {
+      if (ws.readyState === WS_READY_OPEN) {
+        ws.send(JSON.stringify({ message: "heartbeat" }));
+      } else {
+        clearInterval(heartbeatId);
+      }
+    } catch {
+      clearInterval(heartbeatId);
+    }
+  }, HEARTBEAT_INTERVAL_MS);
+
   ws.on("message", async (data) => {
     try {
       const text = typeof data === "string" ? data : data.toString("utf8");
@@ -569,14 +773,9 @@ wss.on("connection", (ws, req) => {
       });
       ws.send(JSON.stringify({ message: "Request received" }));
 
-      // Start assignment in background
-      assignRideToNearestRiders(requestId, {
-        location: msg.location,
-        destination: msg.destination,
-        timestampMs: serverNowMs,
-      }).catch((err) => {
-        console.error("[assign] error:", err);
-      });
+      // Assignment is handled by background processor; no immediate processing here.
+      // Remember who initiated this request so we can push live distance updates after acceptance
+      registerClientForRequest(requestId, ws);
     } catch (err: any) {
       console.error("[ws] message error:", err?.message ?? err);
       ws.send(
@@ -590,5 +789,10 @@ wss.on("connection", (ws, req) => {
 
   ws.on("close", () => {
     console.log("[ws] client disconnected");
+    clearInterval(heartbeatId);
+    unregisterWs(ws);
   });
 });
+
+// Start background processing loop once server is up
+startProcessingLoop();
