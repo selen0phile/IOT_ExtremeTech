@@ -438,8 +438,8 @@ export default function PickupRideView() {
           {isRequested
             ? "🔔 Incoming Request"
             : riderState.state === "pickup"
-            ? "📍 Proceed to Pickup"
-            : "🚀 Heading to Destination"}
+            ? "🏎️ Proceed to Pickup"
+            : "✅ Heading to Destination"}
         </div>
         {isRequested && (
           <div

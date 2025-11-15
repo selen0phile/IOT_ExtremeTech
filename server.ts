@@ -180,6 +180,39 @@ function sendDistanceToClients(requestId: string, distanceMeters: number) {
   }
 }
 
+function sendTextToClients(requestId: string, text: string) {
+  const clients = requestIdToClients.get(requestId);
+  if (!clients || clients.size === 0) return;
+  const payload = JSON.stringify({ message: text });
+  try {
+    console.log("[ws] sending message", {
+      requestId,
+      message: text,
+      clients: clients.size,
+    });
+  } catch {}
+  for (const ws of clients) {
+    try {
+      if (ws.readyState === WS_READY_OPEN) {
+        ws.send(payload);
+      } else {
+        unregisterWs(ws);
+      }
+    } catch {
+      unregisterWs(ws);
+    }
+  }
+  // Detach this request mapping; no further updates expected after final message
+  requestIdToClients.delete(requestId);
+  for (const ws of clients) {
+    const set = wsToRequestIds.get(ws);
+    if (set) {
+      set.delete(requestId);
+      if (set.size === 0) wsToRequestIds.delete(ws);
+    }
+  }
+}
+
 function beginDistanceStreaming(
   requestId: string,
   riderId: string,
@@ -273,6 +306,8 @@ async function processActiveRequestsTick() {
           ageMs: now - tsMs,
         });
       } catch {}
+      // Notify original requester
+      sendTextToClients(requestId, "No rider found");
       ops.push(
         docSnap.ref.set(
           {
@@ -509,6 +544,8 @@ async function assignRideToNearestRiders(
   const start = Date.now();
   const candidates = await getNearestIdleRiders(ride.location);
   if (candidates.length === 0) {
+    // Tell requester no rider was found
+    sendTextToClients(requestId, "No rider found");
     await db.collection("ride_requests").doc(requestId).set(
       {
         state: "timeout",
@@ -743,17 +780,7 @@ async function assignRideToNearestRiders(
     );
 
     // Send "No rider found" message to clients
-    const clients = requestIdToClients.get(requestId);
-    if (clients && clients.size > 0) {
-      const payload = JSON.stringify({ message: "No rider found" });
-      for (const ws of clients) {
-        try {
-          if (ws.readyState === WS_READY_OPEN) {
-            ws.send(payload);
-          }
-        } catch {}
-      }
-    }
+    sendTextToClients(requestId, "No rider found");
 
     // Any notifications still active => mark timeout, reset rider state
     const nsnap = await db
