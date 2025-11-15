@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "rixa-4aa10"
-  }
+    "default": "rixa2-8042b",
+    "rixa2": "rixa2-8042b"
+  },
+  "targets": {},
+  "etags": {}
 }

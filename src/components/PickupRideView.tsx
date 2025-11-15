@@ -28,6 +28,7 @@ export default function PickupRideView() {
   const pickupDistanceRef = useRef<number>(0);
   const ridingDistanceRef = useRef<number>(0);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const didInitialFitRef = useRef<boolean>(false);
   const [, forceTick] = useState(0);
 
   const apiKey =
@@ -101,7 +102,7 @@ export default function PickupRideView() {
 
   // Keep all important markers in view
   useEffect(() => {
-    if (!isLoaded || !mapRef.current) return;
+    if (!isLoaded || !mapRef.current || didInitialFitRef.current) return;
     const m = mapRef.current;
     const bounds = new google.maps.LatLngBounds();
     let count = 0;
@@ -118,11 +119,12 @@ export default function PickupRideView() {
       count++;
     }
     if (count >= 2) {
-      // Padding so markers aren't at the very edge
       m.fitBounds(bounds, 48);
+      didInitialFitRef.current = true;
     } else if (count === 1) {
       m.setCenter(bounds.getCenter());
       m.setZoom(15);
+      didInitialFitRef.current = true;
     }
   }, [
     isLoaded,
@@ -458,8 +460,6 @@ export default function PickupRideView() {
       <div style={MAP_STYLE}>
         {isLoaded ? (
           <GoogleMap
-            zoom={coords ? 15 : 13}
-            center={coords ?? pickupLatLng ?? destLatLng ?? { lat: 0, lng: 0 }}
             mapContainerStyle={{ width: "100%", height: "100%" }}
             options={{ streetViewControl: false, mapTypeControl: false }}
             onLoad={(map) => {
@@ -659,7 +659,7 @@ export default function PickupRideView() {
             <Button
               size="default"
               onClick={handleConfirm}
-              disabled={!distanceToPickup || distanceToPickup >= 100000}
+              disabled={!distanceToPickup || distanceToPickup >= 10}
               style={{
                 marginTop: 8,
                 background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -733,9 +733,7 @@ export default function PickupRideView() {
             <Button
               size="default"
               onClick={() => completeRide()}
-              disabled={
-                !distanceToDestination || distanceToDestination >= 100000
-              }
+              disabled={!distanceToDestination || distanceToDestination >= 10}
               style={{
                 marginTop: 8,
                 background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",

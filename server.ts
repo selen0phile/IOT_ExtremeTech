@@ -157,7 +157,9 @@ function unregisterWs(ws: any) {
 function sendDistanceToClients(requestId: string, distanceMeters: number) {
   const clients = requestIdToClients.get(requestId);
   if (!clients || clients.size === 0) return;
-  const payload = JSON.stringify({ message: Math.round(distanceMeters) });
+  const payload = JSON.stringify({
+    message: "Distance: " + Math.round(distanceMeters) + " m",
+  });
   try {
     console.log("[ws] sending distance", {
       requestId,
@@ -210,6 +212,20 @@ function beginDistanceStreaming(
     const st = snap.data() as any;
     // Stop streaming if rider is no longer in pickup for this request
     if (!st || st.state !== "pickup" || st.requestId !== requestId) {
+      // If rider moved to "riding", send "Arrived" message to clients
+      if (st?.state === "riding" && st?.requestId === requestId) {
+        const clients = requestIdToClients.get(requestId);
+        if (clients && clients.size > 0) {
+          const payload = JSON.stringify({ message: "Arrived" });
+          for (const ws of clients) {
+            try {
+              if (ws.readyState === WS_READY_OPEN) {
+                ws.send(payload);
+              }
+            } catch {}
+          }
+        }
+      }
       cleanup();
     }
   });
@@ -725,6 +741,19 @@ async function assignRideToNearestRiders(
       },
       { merge: true }
     );
+
+    // Send "No rider found" message to clients
+    const clients = requestIdToClients.get(requestId);
+    if (clients && clients.size > 0) {
+      const payload = JSON.stringify({ message: "No rider found" });
+      for (const ws of clients) {
+        try {
+          if (ws.readyState === WS_READY_OPEN) {
+            ws.send(payload);
+          }
+        } catch {}
+      }
+    }
 
     // Any notifications still active => mark timeout, reset rider state
     const nsnap = await db

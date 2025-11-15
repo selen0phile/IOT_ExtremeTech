@@ -1,28 +1,26 @@
-import { initializeApp } from 'firebase/app'
-import { getAuth, GoogleAuthProvider } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 // Firebase configuration provided by the user
 const firebaseConfig = {
-  apiKey: 'AIzaSyDW6PxwUO1Btw7mz_Oz3tJqcLIdBpZ7giY',
-  authDomain: 'rixa-4aa10.firebaseapp.com',
-  projectId: 'rixa-4aa10',
-  storageBucket: 'rixa-4aa10.firebasestorage.app',
-  messagingSenderId: '865095311782',
-  appId: '1:865095311782:web:92cbf2ceb46f32d2dc6f67',
-  measurementId: 'G-LSEE5S2PKX',
-}
+  apiKey: "AIzaSyC_PdWctQaQOTzvk9s2_fiVpd7Zl5YuChA",
+  authDomain: "rixa2-8042b.firebaseapp.com",
+  projectId: "rixa2-8042b",
+  storageBucket: "rixa2-8042b.firebasestorage.app",
+  messagingSenderId: "1058537801124",
+  appId: "1:1058537801124:web:aed1334e340d46b288ed31",
+  measurementId: "G-0FFJS1QPBF",
+};
 
 // Initialize Firebase
-export const firebaseApp = initializeApp(firebaseConfig)
+export const firebaseApp = initializeApp(firebaseConfig);
 
 // Initialize Auth + Google Provider
-export const firebaseAuth = getAuth(firebaseApp)
-firebaseAuth.useDeviceLanguage()
+export const firebaseAuth = getAuth(firebaseApp);
+firebaseAuth.useDeviceLanguage();
 
-export const googleAuthProvider = new GoogleAuthProvider()
+export const googleAuthProvider = new GoogleAuthProvider();
 
 // Firestore
-export const db = getFirestore(firebaseApp)
-
-
+export const db = getFirestore(firebaseApp);
