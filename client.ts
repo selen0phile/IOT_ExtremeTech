@@ -50,17 +50,16 @@ async function main() {
   ws.on("open", () => {
     console.log("[client] Connected. Sending ride request...");
     ws.send(JSON.stringify(payload));
+    console.log("[client] Waiting for messages... (press Ctrl+C to exit)");
   });
 
   ws.on("message", (data) => {
     try {
       const text = typeof data === "string" ? data : data.toString("utf8");
       const parsed = JSON.parse(text);
-      console.log("[client] Response:", parsed);
+      console.log("[client] Message:", parsed);
     } catch (e) {
       console.log("[client] Raw response:", data.toString());
-    } finally {
-      ws.close();
     }
   });
 

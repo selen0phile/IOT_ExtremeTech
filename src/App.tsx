@@ -327,9 +327,9 @@ function App() {
                           onClick={() => setActiveTab(tab)}
                           className={`${
                             tab === activeTab
-                              ? "bg-gradient-to-br from-blue-500 to-purple-500 text-white hover:text-white"
+                              ? "bg-gradient-to-br from-blue-500/90 to-purple-500/90 text-white hover:text-white"
                               : ""
-                          } rounded-lg font-semibold text-sm cursor-pointer transition-all duration-200 ease-in-out`}
+                          } rounded-lg font-semibold text-sm cursor-pointer transition-all duration-200 ease-in-out h-12`}
                         >
                           {tab}
                         </Button>

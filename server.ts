@@ -221,10 +221,16 @@ function beginDistanceStreaming(
     try {
       unsubState();
     } catch {}
+    try {
+      console.log("[stream] stop", { requestId, riderId });
+    } catch {}
     activeDistanceStreams.delete(requestId);
   }
 
   activeDistanceStreams.set(requestId, { stop: cleanup, riderId });
+  try {
+    console.log("[stream] begin", { requestId, riderId });
+  } catch {}
 }
 
 async function processActiveRequestsTick() {
@@ -233,6 +239,9 @@ async function processActiveRequestsTick() {
     .collection("ride_requests")
     .where("state", "==", "active")
     .get();
+  try {
+    console.log("[process] active requests:", snap.size);
+  } catch {}
   const ops: Promise<any>[] = [];
   snap.forEach((docSnap) => {
     const data = docSnap.data() as any;
@@ -242,6 +251,12 @@ async function processActiveRequestsTick() {
       data?.timestamp?.toMillis?.() ??
       (data?.timestamp?.seconds ? data.timestamp.seconds * 1000 : now);
     if (Number.isFinite(tsMs) && now - tsMs > 60_000) {
+      try {
+        console.log("[process] timeout request", {
+          requestId,
+          ageMs: now - tsMs,
+        });
+      } catch {}
       ops.push(
         docSnap.ref.set(
           {
@@ -257,6 +272,9 @@ async function processActiveRequestsTick() {
     // Start processing if not already in-flight
     if (!inFlightRequests.has(requestId)) {
       inFlightRequests.add(requestId);
+      try {
+        console.log("[process] start processing", { requestId });
+      } catch {}
       const loc = data?.location;
       const dest = data?.destination;
       const ride = {
@@ -271,13 +289,12 @@ async function processActiveRequestsTick() {
         timestampMs: tsMs || now,
       };
       // Fire-and-forget; ensure cleanup of inFlight flag
-      assignRideToNearestRiders(requestId, ride)
-        .catch((err) => {
-          console.error("[process] error for", requestId, err);
-        })
-        .finally(() => {
+      assignRideToNearestRiders(requestId, ride).catch((err) => {
+        console.error("[process] error for", requestId, err);
+        try {
           inFlightRequests.delete(requestId);
-        });
+        } catch {}
+      });
     }
   });
   if (ops.length) {
@@ -565,6 +582,9 @@ async function assignRideToNearestRiders(
     settled = true;
     timeoutTimers.forEach(clearTimeout);
     notifUnsub();
+    try {
+      inFlightRequests.delete(requestId);
+    } catch {}
   };
 
   const notifQuery = db
@@ -575,6 +595,12 @@ async function assignRideToNearestRiders(
     const docs = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
     const accepted = docs.find((d: any) => d.state === "accepted");
     if (!accepted) return;
+    try {
+      console.log("[assign] accepted", {
+        requestId,
+        riderId: accepted.riderId,
+      });
+    } catch {}
 
     // Transaction: ensure request still active, then mark accepted
     const ok = await db.runTransaction(async (tx) => {
@@ -742,17 +768,17 @@ wss.on("connection", (ws, req) => {
   console.log(`[ws] client connected ${remote}`);
 
   // Per-connection heartbeat
-  const heartbeatId = setInterval(() => {
-    try {
-      if (ws.readyState === WS_READY_OPEN) {
-        ws.send(JSON.stringify({ message: "heartbeat" }));
-      } else {
-        clearInterval(heartbeatId);
-      }
-    } catch {
-      clearInterval(heartbeatId);
-    }
-  }, HEARTBEAT_INTERVAL_MS);
+  // const heartbeatId = setInterval(() => {
+  //   try {
+  //     if (ws.readyState === WS_READY_OPEN) {
+  //       ws.send(JSON.stringify({ message: "heartbeat" }));
+  //     } else {
+  //       clearInterval(heartbeatId);
+  //     }
+  //   } catch {
+  //     clearInterval(heartbeatId);
+  //   }
+  // }, HEARTBEAT_INTERVAL_MS);
 
   ws.on("message", async (data) => {
     try {
