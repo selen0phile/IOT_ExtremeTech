@@ -39,6 +39,7 @@ export default function RiderNotificationPrompt() {
   const { currentUser } = useAuth();
   const [notifs, setNotifs] = useState<NotificationDoc[]>([]);
   const [now, setNow] = useState(() => Date.now());
+  const [lastActiveIds, setLastActiveIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 250);
@@ -72,6 +73,25 @@ export default function RiderNotificationPrompt() {
         const bt = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
         return bt - at;
       });
+      // Detect newly active notifications to play bell
+      try {
+        const nextActive = new Set<string>();
+        let shouldRing = false;
+        for (const n of rows) {
+          if (n.state === "active") {
+            nextActive.add(n.id);
+            if (!lastActiveIds.has(n.id)) {
+              shouldRing = true;
+            }
+          }
+        }
+        if (shouldRing) {
+          const audio = new Audio("/bell.mp3");
+          // best-effort play; may be blocked until user gesture on some browsers
+          audio.play().catch(() => {});
+        }
+        setLastActiveIds(nextActive);
+      } catch {}
       setNotifs(rows);
     });
     return () => unsub();

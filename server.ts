@@ -815,7 +815,7 @@ wss.on("connection", (ws, req) => {
 
   ws.on("close", () => {
     console.log("[ws] client disconnected");
-    clearInterval(heartbeatId);
+    // clearInterval(heartbeatId);
     unregisterWs(ws);
   });
 });

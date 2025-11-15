@@ -43,11 +43,11 @@ export default function RiderWalletPanel() {
     return () => unsub();
   }, [currentUser?.uid]);
 
-  const redeemAll = async () => {
-    const pts = Number(points ?? 0);
-    if (!Number.isFinite(pts) || pts <= 0) return;
-    await redeemPoints(pts);
-  };
+  // const redeemAll = async () => {
+  //   const pts = Number(points ?? 0);
+  //   if (!Number.isFinite(pts) || pts <= 0) return;
+  //   await redeemPoints(pts);
+  // };
 
   const redeemPoints = async (pts: number) => {
     if (!currentUser) return;
@@ -133,140 +133,58 @@ export default function RiderWalletPanel() {
     : 0;
 
   return (
-    <div
-      style={{
-        background: "rgba(255, 255, 255, 0.95)",
-        border: "1px solid rgba(0, 0, 0, 0.05)",
-        borderRadius: 16,
-        padding: 20,
-        display: "grid",
-        gap: 16,
-        marginBottom: 20,
-        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "1.125rem",
-          fontWeight: 700,
-          color: "#1e293b",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-        }}
-      >
-        <span
+    <div className="bg-white/95 p-4 border border-black/5 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.06)]">
+      <div className="text-xl font-bold text-gray-700 flex items-center gap-2">
+        💰 Wallet
+      </div>
+      <div className="mb-4"></div>
+      <div className="flex items-center gap-4">
+        <div className="border text- flex-1 from-blue-500/90 to-purple-500/90  rounded-lg p-4 flex flex-col justify-between h-32">
+          <div className="text-sm opacity-90 mb-2">Points</div>
+          <div className="text-2xl font-bold">{points ?? 0}</div>
+          <div className="text-sm opacity-90 mt-2">
+            Earned: {totalEarned ?? 0}
+          </div>
+        </div>
+        <div className="flex-1 border from-green-500/90 to-green-400/90 rounded-lg p-4 flex flex-col  h-32 justify-between">
+          <div className="text-sm opacity-90 mb-2">Balance</div>
+          <div className="text-2xl font-bold">{balanceTk ?? 0} ৳</div>
+        </div>
+        {/* 💡 1 point = {POINT_TO_TK} ৳ */}
+      </div>
+      <div className="mb-4"></div>
+      <div className="flex flex-col gap-4">
+        <div className="font-semibold text-gray-700">💫 Redeem Points</div>
+        <input
+          type="number"
+          min={1}
+          placeholder="Points"
+          value={redeemInput}
+          onChange={(e) => setRedeemInput(e.target.value)}
           style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-            display: "inline-block",
+            flex: 1,
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(0, 0, 0, 0.1)",
+            fontSize: "0.875rem",
+            outline: "none",
           }}
         />
-        Wallet
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div
-          style={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            borderRadius: 12,
-            padding: 16,
-            color: "white",
-          }}
+        <Button
+          size="default"
+          onClick={onRedeemClick}
+          disabled={isSubmitting}
+          // className="bg-gradient-to-br from-blue-500/90 to-purple-500/90 text-white"
         >
-          <div style={{ fontSize: "0.75rem", opacity: 0.9, marginBottom: 4 }}>
-            Points
-          </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 800 }}>
-            {points ?? 0}
-          </div>
-          <div style={{ fontSize: "0.75rem", opacity: 0.9, marginTop: 4 }}>
-            Earned total: {totalEarned ?? 0}
-          </div>
-        </div>
-        <div
-          style={{
-            background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-            borderRadius: 12,
-            padding: 16,
-            color: "white",
-          }}
-        >
-          <div style={{ fontSize: "0.75rem", opacity: 0.9, marginBottom: 4 }}>
-            Balance
-          </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 800 }}>
-            {balanceTk ?? 0} ৳
-          </div>
-        </div>
-      </div>
-
-      <div
-        style={{
-          background: "rgba(102, 126, 234, 0.05)",
-          borderRadius: 10,
-          padding: 12,
-          fontSize: "0.8125rem",
-          color: "#667eea",
-          fontWeight: 500,
-          textAlign: "center",
-        }}
-      >
-        💡 1 point = {POINT_TO_TK} ৳
-      </div>
-
-      <div style={{ display: "grid", gap: 10 }}>
-        <div
-          style={{ fontSize: "0.875rem", fontWeight: 600, color: "#1e293b" }}
-        >
-          Redeem Points
-        </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
-          <input
-            type="number"
-            min={1}
-            placeholder="Points"
-            value={redeemInput}
-            onChange={(e) => setRedeemInput(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "10px 12px",
-              borderRadius: 8,
-              border: "1px solid rgba(0, 0, 0, 0.1)",
-              fontSize: "0.875rem",
-              outline: "none",
-            }}
-          />
-          <Button
-            size="default"
-            onClick={onRedeemClick}
-            disabled={isSubmitting}
-            style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              color: "white",
-              fontWeight: 600,
-              border: "none",
-              padding: "10px 20px",
-            }}
-          >
-            Redeem
-          </Button>
-        </div>
+          Redeem
+        </Button>
         {redeemInput && Number(redeemInput) > 0 && (
-          <div
-            style={{
-              fontSize: "0.75rem",
-              color: "#10b981",
-              fontWeight: 600,
-              textAlign: "center",
-            }}
-          >
+          <div className="text-sm text-green-500 font-semibold text-center">
             You'll receive {previewTk} ৳
           </div>
         )}
-        <Button
+
+        {/* <Button
           size="sm"
           variant="outline"
           onClick={redeemAll}
@@ -278,24 +196,13 @@ export default function RiderWalletPanel() {
           }}
         >
           Redeem All ({points ?? 0} pts → {(points ?? 0) * POINT_TO_TK} ৳)
-        </Button>
+        </Button> */}
+        {error ? (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-500 font-semibold text-center">
+            ⚠️ {error}
+          </div>
+        ) : null}
       </div>
-
-      {error ? (
-        <div
-          style={{
-            background: "rgba(239, 68, 68, 0.1)",
-            border: "1px solid rgba(239, 68, 68, 0.2)",
-            borderRadius: 8,
-            padding: 10,
-            color: "#dc2626",
-            fontSize: "0.8125rem",
-            fontWeight: 500,
-          }}
-        >
-          ⚠️ {error}
-        </div>
-      ) : null}
     </div>
   );
 }

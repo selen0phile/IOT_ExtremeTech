@@ -62,57 +62,32 @@ function App() {
       >
         {!currentUser ? (
           // Login Screen
-          <div
-            style={{
-              display: "flex",
-              minHeight: "100dvh",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "20px",
-            }}
-          >
+          <div className="flex flex-col items-center justify-center min-h-screen">
+            <img
+              src="https://cdn3d.iconscout.com/3d/premium/thumb/auto-rickshaw-3d-icon-png-download-4122512.png"
+              style={{ width: 256, height: 256 }}
+            />
             <div
               style={{
-                width: "100%",
-                maxWidth: 420,
-                textAlign: "center",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                fontSize: "3rem",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
               }}
-              className="flex flex-col items-center gap-2"
+              className="bg-gradient-to-br from-blue-500 to-purple-500 bg-clip-text text-transparent"
             >
-              <img
-                src="https://cdn3d.iconscout.com/3d/premium/thumb/auto-rickshaw-3d-icon-png-download-4122512.png"
-                style={{ width: 256, height: 256 }}
-              />
-              <div
-                style={{
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  fontSize: "3rem",
-                  fontWeight: 800,
-                  marginBottom: 16,
-                  letterSpacing: "-0.02em",
-                }}
-                className="bg-gradient-to-br from-blue-500 to-purple-500 bg-clip-text text-transparent"
-              >
-                Rixa
-              </div>
-              <p
-                style={{
-                  fontSize: "1.125rem",
-                  color: "#64748b",
-                  marginBottom: 40,
-                  fontWeight: 500,
-                }}
-              >
-                Your trusted ride companion
-              </p>
-              {isInitializing ? (
-                <div style={{ color: "#64748b" }}>Loading…</div>
-              ) : (
-                <GoogleLoginButton />
-              )}
+              Rixa
             </div>
+            <p className="text-gray-500 mb-8 text-center tracking-tight">
+              Your trusted ride companion
+            </p>
+            {isInitializing ? (
+              <div style={{ color: "#64748b" }}>Loading…</div>
+            ) : (
+              <GoogleLoginButton className="bg-gradient-to-br from-blue-500 to-purple-500 text-white h-12 rounded-lg font-semibold cursor-pointer transition-all duration-200 ease-in-out px-8 text-base hover:text-white" />
+            )}
           </div>
         ) : (
           // Main App
@@ -125,7 +100,7 @@ function App() {
             ) : (
               <>
                 {/* Header */}
-                <div className="bg-gradient-to-br from-blue-500/90 to-purple-500/80 p-2 rounded-b-lg shadow-lg">
+                <div className="bg-gradient-to-br from-blue-500 to-purple-500 p-2 rounded-b-lg shadow-lg">
                   <div
                     style={{
                       display: "flex",
@@ -149,7 +124,7 @@ function App() {
                       Rixa
                     </div>
                     <Button
-                      variant="outline"
+                      variant="destructive"
                       className="text-xs"
                       onClick={signOut}
                     >
@@ -325,9 +300,10 @@ function App() {
                           variant="outline"
                           key={tab}
                           onClick={() => setActiveTab(tab)}
+                          // className="h-12"
                           className={`${
                             tab === activeTab
-                              ? "bg-gradient-to-br from-blue-500/90 to-purple-500/90 text-white hover:text-white"
+                              ? "bg-gradient-to-br border-0 from-blue-500 to-purple-500 text-white hover:text-white"
                               : ""
                           } rounded-lg font-semibold text-sm cursor-pointer transition-all duration-200 ease-in-out h-12`}
                         >

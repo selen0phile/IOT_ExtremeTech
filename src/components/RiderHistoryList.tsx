@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { GoogleMap, MarkerF, useLoadScript } from "@react-google-maps/api";
 import { doc, getDoc } from "firebase/firestore";
+import { LocateFixedIcon, MapPinIcon } from "lucide-react";
 
 type NotificationItem = {
   id: string;
@@ -39,14 +40,25 @@ type NotificationItem = {
   };
 };
 
-const FILTERS = ["all", "complete", "cancelled", "timeout", "rejected", "accepted", "filled", "riding"] as const;
+const FILTERS = [
+  "all",
+  "complete",
+  "cancelled",
+  "timeout",
+  "rejected",
+  "accepted",
+  "filled",
+  "riding",
+] as const;
 type Filter = (typeof FILTERS)[number];
 
 export default function RiderHistoryList() {
   const { currentUser } = useAuth();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
-  const [earnedByRequest, setEarnedByRequest] = useState<Record<string, number>>({});
+  const [earnedByRequest, setEarnedByRequest] = useState<
+    Record<string, number>
+  >({});
 
   useEffect(() => {
     if (!currentUser) {
@@ -54,7 +66,10 @@ export default function RiderHistoryList() {
       setEarnedByRequest({});
       return;
     }
-    const q = query(collection(db, "notifications"), where("riderId", "==", currentUser.uid));
+    const q = query(
+      collection(db, "notifications"),
+      where("riderId", "==", currentUser.uid)
+    );
     const unsub = onSnapshot(q, (snap) => {
       const rows: NotificationItem[] = [];
       snap.forEach((d) => {
@@ -95,16 +110,23 @@ export default function RiderHistoryList() {
       setEarnedByRequest({});
       return;
     }
-    const unsub = onSnapshot(collection(db, "rider_points", currentUser.uid, "transactions"), (snap) => {
-      const map: Record<string, number> = {};
-      snap.forEach((d) => {
-        const data = d.data() as any;
-        if (data?.type === "earn" && typeof data?.amount === "number" && typeof data?.requestId === "string") {
-          map[data.requestId] = data.amount;
-        }
-      });
-      setEarnedByRequest(map);
-    });
+    const unsub = onSnapshot(
+      collection(db, "rider_points", currentUser.uid, "transactions"),
+      (snap) => {
+        const map: Record<string, number> = {};
+        snap.forEach((d) => {
+          const data = d.data() as any;
+          if (
+            data?.type === "earn" &&
+            typeof data?.amount === "number" &&
+            typeof data?.requestId === "string"
+          ) {
+            map[data.requestId] = data.amount;
+          }
+        });
+        setEarnedByRequest(map);
+      }
+    );
     return () => unsub();
   }, [currentUser]);
 
@@ -194,7 +216,7 @@ export default function RiderHistoryList() {
             const pts = ptsTxn != null ? ptsTxn : pointsFor(n.state);
             const from = n.ride?.location;
             const to = n.ride?.destination;
-            
+
             const stateColors: Record<string, string> = {
               complete: "#10b981",
               cancelled: "#ef4444",
@@ -205,7 +227,7 @@ export default function RiderHistoryList() {
               riding: "#06b6d4",
             };
             const stateColor = stateColors[n.state] ?? "#64748b";
-            
+
             return (
               <div
                 key={n.id}
@@ -219,15 +241,34 @@ export default function RiderHistoryList() {
                   boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#1e293b" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: 600,
+                      color: "#1e293b",
+                    }}
+                  >
                     #{n.requestId.slice(0, 8)}
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                    {ts ? ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "—"}
+                    {ts ? ts.toLocaleString() : "—"}
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
                   <div
                     style={{
                       padding: "4px 10px",
@@ -255,12 +296,29 @@ export default function RiderHistoryList() {
                     </div>
                   )}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#64748b", lineHeight: 1.5 }}>
-                  <div>From: {from ? `${from.latitude?.toFixed?.(5)}, ${from.longitude?.toFixed?.(5)}` : "—"}</div>
-                  <div>To: {to ? `${to.latitude?.toFixed?.(5)}, ${to.longitude?.toFixed?.(5)}` : "—"}</div>
-                </div>
-                <div>
-                  <DetailsDialog item={n} earned={earnedByRequest[n.requestId]} />
+                <div className="flex justify-between items-center">
+                  <div className="text-xs text-gray-500 flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <MapPinIcon className="size-4" />
+                      {from
+                        ? ` ${from.latitude?.toFixed?.(
+                            5
+                          )}, ${from.longitude?.toFixed?.(5)}`
+                        : "—"}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <LocateFixedIcon className="size-4" />
+                      {to
+                        ? `${to.latitude?.toFixed?.(
+                            5
+                          )}, ${to.longitude?.toFixed?.(5)}`
+                        : "—"}
+                    </div>
+                  </div>
+                  <DetailsDialog
+                    item={n}
+                    earned={earnedByRequest[n.requestId]}
+                  />
                 </div>
               </div>
             );
@@ -271,11 +329,20 @@ export default function RiderHistoryList() {
   );
 }
 
-function DetailsDialog({ item, earned }: { item: NotificationItem; earned?: number }) {
+function DetailsDialog({
+  item,
+  earned,
+}: {
+  item: NotificationItem;
+  earned?: number;
+}) {
   const apiKey =
     (import.meta.env as any).VITE_GOOGLE_MAPS_API_KEY ||
     (import.meta.env as any).GOOGLE_MAPS_API_KEY;
-  const { isLoaded } = useLoadScript({ googleMapsApiKey: apiKey ?? "", id: "rixa-history-map" });
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: apiKey ?? "",
+    id: "rixa-history-map",
+  });
   const [metrics, setMetrics] = useState<any | null>(null);
   const [basePoint, setBasePoint] = useState<number>(10);
 
@@ -306,25 +373,22 @@ function DetailsDialog({ item, earned }: { item: NotificationItem; earned?: numb
   const from = item.ride?.location;
   const to = item.ride?.destination;
   const rider = item.rider?.location ?? null;
-  const center =
-    rider
-      ? { lat: rider.latitude, lng: rider.longitude }
-      : from
-      ? { lat: from.latitude, lng: from.longitude }
-      : to
-      ? { lat: to.latitude, lng: to.longitude }
-      : { lat: 0, lng: 0 };
+  const center = rider
+    ? { lat: rider.latitude, lng: rider.longitude }
+    : from
+    ? { lat: from.latitude, lng: from.longitude }
+    : to
+    ? { lat: to.latitude, lng: to.longitude }
+    : { lat: 0, lng: 0 };
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Details
-        </Button>
+        <Button variant="outline">Details</Button>
       </DialogTrigger>
       <DialogContent showCloseButton>
         <DialogHeader>
-          <DialogTitle>Ride details</DialogTitle>
+          <DialogTitle>Ride Details</DialogTitle>
         </DialogHeader>
         <div style={{ display: "grid", gap: 10 }}>
           <div style={{ height: 260, borderRadius: 8, overflow: "hidden" }}>
@@ -369,15 +433,57 @@ function DetailsDialog({ item, earned }: { item: NotificationItem; earned?: numb
               ? item.createdAt.toDate().toLocaleString()
               : "—"}
           </div>
-          <div style={{ display: "grid", gap: 6 }}>
-            <div>Status: {item.state}</div>
+          <div className="flex flex-col gap-3 p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-600">Status</span>
+              <span
+                className={`px-3 py-1 text-xs font-semibold rounded text-white capitalize ${
+                  item.state === "complete"
+                    ? "bg-green-600"
+                    : item.state === "cancelled"
+                    ? "bg-red-600"
+                    : item.state === "timeout"
+                    ? "bg-yellow-500"
+                    : item.state === "rejected"
+                    ? "bg-gray-500"
+                    : item.state === "accepted"
+                    ? "bg-blue-600"
+                    : item.state === "filled"
+                    ? "bg-purple-600"
+                    : "bg-gray-600"
+                }`}
+              >
+                {item.state}
+              </span>
+            </div>
             {metrics ? (
-              <div style={{ fontSize: 12 }}>
-                elapsed: {formatDuration(metrics?.total?.timeMs ?? 0)} — distance:{" "}
-                {metrics?.total?.distanceMeters ?? "—"} m
+              <div className="flex flex-col gap-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Duration</span>
+                  <span className="font-semibold text-gray-800">
+                    {formatDuration(metrics?.total?.timeMs ?? 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Distance</span>
+                  <span className="font-semibold text-gray-800">
+                    {metrics?.total?.distanceMeters ?? "—"} m
+                  </span>
+                </div>
               </div>
             ) : null}
-            <div>Points: {points > 0 ? `+${points}` : points}</div>
+            <div className="flex items-center justify-between pt-2 border-t border-gray-300">
+              <span className="text-sm font-medium text-gray-600">
+                Points Earned
+              </span>
+              <span
+                className={`text-lg font-bold ${
+                  points > 0 ? "text-green-600" : "text-gray-800"
+                }`}
+              >
+                {points > 0 ? `+${points}` : points}
+              </span>
+            </div>
           </div>
         </div>
       </DialogContent>
@@ -404,5 +510,3 @@ function formatDuration(ms: number): string {
   const pad = (n: number) => n.toString().padStart(2, "0");
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
-
-
