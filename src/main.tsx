@@ -5,6 +5,8 @@ import App from './App.tsx'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AdminPage from '@/pages/Admin'
+import Landing from '@/pages/Landing'
+import ApiDocs from '@/pages/ApiDocs'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -13,6 +15,8 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<App />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/landing" element={<Landing />} />
+          <Route path="/api-docs" element={<ApiDocs />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -14,16 +14,19 @@ import RiderWalletPanel from "@/components/RiderWalletPanel";
 import { useState, useEffect } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useNavigate } from "react-router-dom";
 import {
   DollarSignIcon,
   LogOutIcon,
   MailIcon,
   StarIcon,
   UserIcon,
+  InfoIcon,
 } from "lucide-react";
 
 function App() {
   const { currentUser, isInitializing, signOut } = useAuth();
+  const navigate = useNavigate();
   const { coords, error } = useRiderLocation(currentUser);
   const { riderState } = useRiderState(currentUser?.uid);
   const { activeNotification } = useActiveNotification(currentUser?.uid);
@@ -148,13 +151,22 @@ function App() {
                       />
                       Rixa
                     </div>
-                    <Button
-                      variant="outline"
-                      className="text-xs"
-                      onClick={signOut}
-                    >
-                      Logout <LogOutIcon className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="text-xs"
+                        onClick={() => navigate("/landing")}
+                      >
+                        <InfoIcon className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-xs"
+                        onClick={signOut}
+                      >
+                        Logout <LogOutIcon className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                   <div
                     className=" text-white p-2 bg-white/10 rounded-lg flex
