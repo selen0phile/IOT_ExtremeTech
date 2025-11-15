@@ -14,16 +14,19 @@ import RiderWalletPanel from "@/components/RiderWalletPanel";
 import { useState, useEffect } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useNavigate } from "react-router-dom";
 import {
   DollarSignIcon,
   LogOutIcon,
   MailIcon,
   StarIcon,
   UserIcon,
+  InfoIcon,
 } from "lucide-react";
 
 function App() {
   const { currentUser, isInitializing, signOut } = useAuth();
+  const navigate = useNavigate();
   const { coords, error } = useRiderLocation(currentUser);
   const { riderState } = useRiderState(currentUser?.uid);
   const { activeNotification } = useActiveNotification(currentUser?.uid);
