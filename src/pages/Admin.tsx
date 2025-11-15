@@ -49,7 +49,7 @@ function StatCard({
         }}
       >
         {label}
-      </div>
+    </div>
       <div
         style={{
           fontSize: "2.5rem",
@@ -106,7 +106,7 @@ export default function AdminPage() {
   // Riders + states
   const [ridersMap, setRidersMap] = useState<
     Record<
-      string,
+    string,
       {
         uid: string;
         name: string;
@@ -174,8 +174,8 @@ export default function AdminPage() {
   // Online pullers: realtime riders (location + updatedAt)
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "riders"), (rSnap) => {
-      const rmap: Record<
-        string,
+        const rmap: Record<
+          string,
         {
           uid: string;
           name: string;
@@ -184,10 +184,10 @@ export default function AdminPage() {
           updatedAt?: Date | null;
         }
       > = {};
-      rSnap.forEach((d) => {
+        rSnap.forEach((d) => {
         const data = d.data() as any;
-        rmap[d.id] = {
-          uid: data?.uid ?? d.id,
+          rmap[d.id] = {
+            uid: data?.uid ?? d.id,
           name: data?.name ?? "Unnamed",
           lat:
             typeof data?.location?.latitude === "number"
@@ -197,7 +197,7 @@ export default function AdminPage() {
             typeof data?.location?.longitude === "number"
               ? data.location.longitude
               : undefined,
-          updatedAt: data?.location?.updatedAt?.toDate?.() ?? null,
+            updatedAt: data?.location?.updatedAt?.toDate?.() ?? null,
         };
       });
       setRidersMap(rmap);
@@ -209,7 +209,7 @@ export default function AdminPage() {
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "rider_state"), (sSnap) => {
       const smap: Record<string, string> = {};
-      sSnap.forEach((d) => {
+        sSnap.forEach((d) => {
         const data = d.data() as any;
         smap[d.id] = data?.state ?? "idle";
       });
@@ -452,7 +452,7 @@ export default function AdminPage() {
           balance: mod.increment(-amt),
           lastUpdated: mod.serverTimestamp(),
         } as any,
-        { merge: true }
+      { merge: true }
       );
       tx.set(
         bRef as any,
@@ -680,19 +680,19 @@ export default function AdminPage() {
                     borderBottom: "2px solid rgba(0, 0, 0, 0.05)",
                   }}
                 >
-                  <div>Name</div>
-                  <div>Status</div>
-                  <div>Coordinates</div>
-                  <div>Distance</div>
-                </div>
+            <div>Name</div>
+            <div>Status</div>
+            <div>Coordinates</div>
+            <div>Distance</div>
+          </div>
                 <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
-                  {onlinePullersList.map((r) => (
-                    <div
-                      key={r.uid}
-                      style={{
+            {onlinePullersList.map((r) => (
+              <div
+                key={r.uid}
+                style={{
                         display: "grid",
                         gridTemplateColumns: "1.2fr .8fr 1.4fr .8fr",
-                        gap: 8,
+                  gap: 8,
                         fontSize: "0.875rem",
                         padding: "10px 0",
                         borderBottom: "1px solid rgba(0, 0, 0, 0.03)",
@@ -707,20 +707,20 @@ export default function AdminPage() {
                           color: "#1e293b",
                         }}
                       >
-                        <span
-                          style={{
+                      <span
+                        style={{
                             width: 12,
                             height: 12,
-                            borderRadius: 999,
-                            background: nameToColor(r.name),
+                          borderRadius: 999,
+                          background: nameToColor(r.name),
                             display: "inline-block",
                             border: "2px solid white",
                             boxShadow: `0 0 0 2px ${nameToColor(r.name)}`,
-                          }}
-                        />
-                        {r.name}
-                      </div>
-                      <div>
+                        }}
+                      />
+                      {r.name}
+                    </div>
+                <div>
                         <span
                           style={{
                             padding: "4px 8px",
@@ -746,18 +746,18 @@ export default function AdminPage() {
                       </div>
                       <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
                         {typeof r.lat === "number" && typeof r.lng === "number"
-                          ? `${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}`
+                    ? `${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}`
                           : "—"}
-                      </div>
+                </div>
                       <div style={{ fontWeight: 600, color: "#667eea" }}>
                         {r.distanceMeters != null
                           ? `${Math.round(r.distanceMeters)} m`
                           : "—"}
                       </div>
-                    </div>
-                  ))}
-                </div>
               </div>
+            ))}
+          </div>
+        </div>
               <div
                 style={{
                   background: "rgba(255, 255, 255, 0.95)",
@@ -779,38 +779,38 @@ export default function AdminPage() {
                 >
                   Live Map (Booth-centered)
                 </div>
-                <div style={{ height: 420 }}>
-                  {isLoaded ? (
-                    <GoogleMap
-                      zoom={14}
-                      center={booth}
+          <div style={{ height: 420 }}>
+            {isLoaded ? (
+              <GoogleMap
+                zoom={14}
+                center={booth}
                       mapContainerStyle={{ width: "100%", height: "100%" }}
                       options={{
                         streetViewControl: false,
                         mapTypeControl: false,
                       }}
-                    >
-                      {/* Booth marker */}
-                      <MarkerF position={booth} title="Booth" />
-                      {/* Pullers */}
-                      {onlinePullersList.map((r) =>
+              >
+                {/* Booth marker */}
+                <MarkerF position={booth} title="Booth" />
+                {/* Pullers */}
+                    {onlinePullersList.map((r) =>
                         typeof r.lat === "number" &&
                         typeof r.lng === "number" ? (
-                          <MarkerF
-                            key={r.uid}
-                            position={{ lat: r.lat, lng: r.lng }}
-                            title={`${r.name} (${r.state})`}
-                            icon={markerIcon(nameToColor(r.name))}
-                          />
-                        ) : null
-                      )}
-                    </GoogleMap>
-                  ) : (
-                    <div style={{ padding: 12 }}>Loading map…</div>
-                  )}
-                </div>
-              </div>
-            </div>
+                    <MarkerF
+                      key={r.uid}
+                      position={{ lat: r.lat, lng: r.lng }}
+                          title={`${r.name} (${r.state})`}
+                          icon={markerIcon(nameToColor(r.name))}
+                    />
+                  ) : null
+                )}
+              </GoogleMap>
+            ) : (
+              <div style={{ padding: 12 }}>Loading map…</div>
+            )}
+          </div>
+        </div>
+      </div>
           </div>
         )}
 
@@ -1708,10 +1708,10 @@ export default function AdminPage() {
                 >
                   Base point per completed ride:
                 </span>
-                <input
-                  type="number"
+          <input
+            type="number"
                   value={basePoint ?? ""}
-                  onChange={(e) => setBasePoint(Number(e.target.value))}
+            onChange={(e) => setBasePoint(Number(e.target.value))}
                   style={{
                     width: 100,
                     padding: "8px 12px",
@@ -1732,7 +1732,7 @@ export default function AdminPage() {
                 >
                   💾 Save
                 </Button>
-              </div>
+        </div>
               <div style={{ height: 1, background: "rgba(0, 0, 0, 0.05)" }} />
               <div
                 style={{
@@ -1764,11 +1764,11 @@ export default function AdminPage() {
                     fontSize: "0.875rem",
                   }}
                 />
-                <input
-                  type="number"
+          <input
+            type="number"
                   placeholder="Points"
-                  value={adjustAmount}
-                  onChange={(e) => setAdjustAmount(Number(e.target.value))}
+            value={adjustAmount}
+            onChange={(e) => setAdjustAmount(Number(e.target.value))}
                   style={{
                     width: 120,
                     padding: "8px 12px",
@@ -1788,9 +1788,9 @@ export default function AdminPage() {
                   }}
                 >
                   💸 Redeem
-                </Button>
-              </div>
-            </div>
+          </Button>
+        </div>
+      </div>
           </div>
         )}
 
@@ -1798,7 +1798,7 @@ export default function AdminPage() {
         {false && (
           <div>
             <div
-              style={{
+                style={{
                 fontSize: "1.25rem",
                 fontWeight: 700,
                 color: "#1e293b",
@@ -1806,7 +1806,7 @@ export default function AdminPage() {
               }}
             >
               📈 Analytics & Insights
-            </div>
+                </div>
             <div
               style={{
                 background: "rgba(255, 255, 255, 0.95)",
@@ -1842,11 +1842,11 @@ export default function AdminPage() {
                     }}
                   >
                     Avg Wait Time
-                  </div>
+                </div>
                   <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
                     {formatDuration(avgWaitMs)}
-                  </div>
                 </div>
+                  </div>
                 <div
                   style={{
                     background:
@@ -1864,7 +1864,7 @@ export default function AdminPage() {
                     }}
                   >
                     Avg Completion
-                  </div>
+              </div>
                   <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
                     {formatDuration(avgCompletionMs)}
                   </div>
@@ -1890,8 +1890,8 @@ export default function AdminPage() {
                   <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
                     {formatMeters(avgDistanceMeters)}
                   </div>
-                </div>
-              </div>
+        </div>
+      </div>
 
               <div style={{ height: 1, background: "rgba(0, 0, 0, 0.05)" }} />
 
@@ -1912,7 +1912,7 @@ export default function AdminPage() {
                     gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))",
                   }}
                 >
-                  {topDestinations.map((d) => (
+          {topDestinations.map((d) => (
                     <div
                       key={d.key}
                       style={{
@@ -1988,9 +1988,9 @@ export default function AdminPage() {
                           </div>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
+            </div>
+          ))}
+        </div>
               </div>
 
               <div style={{ height: 1, background: "rgba(0, 0, 0, 0.05)" }} />
@@ -2100,11 +2100,11 @@ export default function AdminPage() {
                           {riderPoints[r.uid] ?? 0} pts
                         </span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
+          ))}
+        </div>
+      </div>
+    </div>
           </div>
         )}
       </div>

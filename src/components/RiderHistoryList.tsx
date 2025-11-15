@@ -46,10 +46,12 @@ export default function RiderHistoryList() {
   const { currentUser } = useAuth();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
+  const [earnedByRequest, setEarnedByRequest] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!currentUser) {
       setItems([]);
+      setEarnedByRequest({});
       return;
     }
     const q = query(collection(db, "notifications"), where("riderId", "==", currentUser.uid));
@@ -83,6 +85,25 @@ export default function RiderHistoryList() {
         return bt - at;
       });
       setItems(rows);
+    });
+    return () => unsub();
+  }, [currentUser]);
+
+  // Subscribe to rider_points/{uid}/transactions to read actual earned points per request
+  useEffect(() => {
+    if (!currentUser) {
+      setEarnedByRequest({});
+      return;
+    }
+    const unsub = onSnapshot(collection(db, "rider_points", currentUser.uid, "transactions"), (snap) => {
+      const map: Record<string, number> = {};
+      snap.forEach((d) => {
+        const data = d.data() as any;
+        if (data?.type === "earn" && typeof data?.amount === "number" && typeof data?.requestId === "string") {
+          map[data.requestId] = data.amount;
+        }
+      });
+      setEarnedByRequest(map);
     });
     return () => unsub();
   }, [currentUser]);
@@ -169,7 +190,8 @@ export default function RiderHistoryList() {
         <div style={{ display: "grid", gap: 10 }}>
           {filtered.map((n) => {
             const ts = n.createdAt?.toDate ? n.createdAt.toDate() : null;
-            const pts = pointsFor(n.state);
+            const ptsTxn = earnedByRequest[n.requestId];
+            const pts = ptsTxn != null ? ptsTxn : pointsFor(n.state);
             const from = n.ride?.location;
             const to = n.ride?.destination;
             
@@ -238,7 +260,7 @@ export default function RiderHistoryList() {
                   <div>To: {to ? `${to.latitude?.toFixed?.(5)}, ${to.longitude?.toFixed?.(5)}` : "—"}</div>
                 </div>
                 <div>
-                  <DetailsDialog item={n} />
+                  <DetailsDialog item={n} earned={earnedByRequest[n.requestId]} />
                 </div>
               </div>
             );
@@ -249,7 +271,7 @@ export default function RiderHistoryList() {
   );
 }
 
-function DetailsDialog({ item }: { item: NotificationItem }) {
+function DetailsDialog({ item, earned }: { item: NotificationItem; earned?: number }) {
   const apiKey =
     (import.meta.env as any).VITE_GOOGLE_MAPS_API_KEY ||
     (import.meta.env as any).GOOGLE_MAPS_API_KEY;
@@ -273,7 +295,13 @@ function DetailsDialog({ item }: { item: NotificationItem }) {
   }, [item.requestId]);
 
   const points =
-    item.state === "complete" ? +basePoint : item.state === "cancelled" ? -basePoint : 0;
+    typeof earned === "number"
+      ? earned
+      : item.state === "complete"
+      ? +basePoint
+      : item.state === "cancelled"
+      ? -basePoint
+      : 0;
 
   const from = item.ride?.location;
   const to = item.ride?.destination;

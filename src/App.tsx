@@ -14,6 +14,13 @@ import RiderWalletPanel from "@/components/RiderWalletPanel";
 import { useState, useEffect } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import {
+  DollarSignIcon,
+  LogOutIcon,
+  MailIcon,
+  StarIcon,
+  UserIcon,
+} from "lucide-react";
 
 function App() {
   const { currentUser, isInitializing, signOut } = useAuth();
@@ -23,8 +30,8 @@ function App() {
   const { balance: points } = useRiderPoints(currentUser?.uid);
   const [balanceTk, setBalanceTk] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<
-    "Dashboard" | "Wallet" | "Nearby Riders"
-  >("Dashboard");
+    "🏠 Dashboard" | "💰 Wallet" | "🛵 Nearby"
+  >("🏠 Dashboard");
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -70,11 +77,14 @@ function App() {
                 maxWidth: 420,
                 textAlign: "center",
               }}
+              className="flex flex-col items-center gap-2"
             >
+              <img
+                src="https://cdn3d.iconscout.com/3d/premium/thumb/auto-rickshaw-3d-icon-png-download-4122512.png"
+                style={{ width: 256, height: 256 }}
+              />
               <div
                 style={{
-                  background:
-                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
@@ -83,6 +93,7 @@ function App() {
                   marginBottom: 16,
                   letterSpacing: "-0.02em",
                 }}
+                className="bg-gradient-to-br from-blue-500 to-purple-500 bg-clip-text text-transparent"
               >
                 Rixa
               </div>
@@ -114,14 +125,7 @@ function App() {
             ) : (
               <>
                 {/* Header */}
-                <div
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    padding: "20px 20px 24px",
-                    boxShadow: "0 4px 12px rgba(102, 126, 234, 0.15)",
-                  }}
-                >
+                <div className="bg-gradient-to-br from-blue-500/90 to-purple-500/80 p-2 rounded-b-lg shadow-lg">
                   <div
                     style={{
                       display: "flex",
@@ -136,25 +140,48 @@ function App() {
                         color: "white",
                         letterSpacing: "-0.01em",
                       }}
+                      className="flex items-center gap-2"
                     >
+                      <img
+                        src="https://cdn3d.iconscout.com/3d/premium/thumb/auto-rickshaw-3d-icon-png-download-4122512.png"
+                        style={{ width: 64, height: 64 }}
+                      />
                       Rixa
                     </div>
                     <Button
-                      variant="ghost"
-                      size="sm"
+                      variant="outline"
+                      className="text-xs"
                       onClick={signOut}
-                      style={{
-                        color: "white",
-                        fontSize: "0.875rem",
-                      }}
                     >
-                      Sign out
+                      Logout <LogOutIcon className="w-4 h-4" />
                     </Button>
+                  </div>
+                  <div
+                    className=" text-white p-2 bg-white/10 rounded-lg flex
+                  justify-between items-center px-4"
+                  >
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="w-4 h-4" />{" "}
+                        {currentUser.displayName ?? "Rider"}
+                      </div>
+                      <div className="text-sm text-white/80 flex items-center gap-2">
+                        <MailIcon className="w-4 h-4" /> {currentUser.email}
+                      </div>
+                    </div>
+                    <div className="text-sm flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-lg">
+                        <StarIcon className="w-4 h-4" /> {points ?? 0}
+                      </div>
+                      <div className="flex items-center gap-2 text-lg">
+                        <DollarSignIcon className="w-4 h-4" /> {balanceTk}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Content */}
-                <div style={{ padding: 20 }}>
+                <div className="p-4">
                   {error ? (
                     <div
                       style={{
@@ -172,7 +199,7 @@ function App() {
                   ) : null}
 
                   {/* Profile Card with Wallet Info */}
-                  <div
+                  {/* <div
                     style={{
                       background: "rgba(255, 255, 255, 0.95)",
                       border: "1px solid rgba(0, 0, 0, 0.05)",
@@ -187,7 +214,7 @@ function App() {
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 16 }}
                     >
-                      <div
+                      {/* <div
                         style={{
                           width: 64,
                           height: 64,
@@ -205,7 +232,7 @@ function App() {
                       >
                         {currentUser.displayName?.charAt(0)?.toUpperCase() ??
                           "R"}
-                      </div>
+                      </div> 
                       <div style={{ flex: 1 }}>
                         <div
                           style={{
@@ -280,7 +307,7 @@ function App() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Navigation Tabs */}
                   <div
@@ -288,51 +315,43 @@ function App() {
                       display: "flex",
                       gap: 8,
                       marginBottom: 20,
-                      borderBottom: "2px solid rgba(0, 0, 0, 0.05)",
+                      // borderBottom: "2px solid rgba(0, 0, 0, 0.05)",
                       paddingBottom: 2,
                     }}
                   >
-                    {(["Dashboard", "Wallet", "Nearby Riders"] as const).map(
+                    {(["🏠 Dashboard", "💰 Wallet", "🛵 Nearby"] as const).map(
                       (tab) => (
-                        <button
+                        <Button
+                          variant="outline"
                           key={tab}
                           onClick={() => setActiveTab(tab)}
-                          style={{
-                            background:
-                              tab === activeTab
-                                ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                                : "transparent",
-                            color: tab === activeTab ? "white" : "#64748b",
-                            border: "none",
-                            padding: "10px 20px",
-                            borderRadius: "8px 8px 0 0",
-                            fontWeight: 600,
-                            fontSize: "0.875rem",
-                            cursor: "pointer",
-                            transition: "all 0.2s ease",
-                          }}
+                          className={`${
+                            tab === activeTab
+                              ? "bg-gradient-to-br from-blue-500 to-purple-500 text-white hover:text-white"
+                              : ""
+                          } rounded-lg font-semibold text-sm cursor-pointer transition-all duration-200 ease-in-out`}
                         >
                           {tab}
-                        </button>
+                        </Button>
                       )
                     )}
                   </div>
 
                   {/* Tab Content */}
-                  {activeTab === "Dashboard" && (
+                  {activeTab === "🏠 Dashboard" && (
                     <>
                       <RiderMap coords={coords} />
                       <RiderHistoryList />
                     </>
                   )}
 
-                  {activeTab === "Wallet" && (
+                  {activeTab === "💰 Wallet" && (
                     <div style={{ marginTop: 0 }}>
                       <RiderWalletPanel />
                     </div>
                   )}
 
-                  {activeTab === "Nearby Riders" && (
+                  {activeTab === "🛵 Nearby" && (
                     <>
                       <RiderMap coords={coords} />
                       <ActiveRidersList currentCoords={coords} />
