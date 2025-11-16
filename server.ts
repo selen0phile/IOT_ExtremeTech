@@ -543,13 +543,29 @@ async function assignRideToNearestRiders(
   // notifications become "filled".
   const start = Date.now();
   const candidates = await getNearestIdleRiders(ride.location);
-  if (candidates.length === 0) {
+  // Build a ban-list of riders who already cancelled or rejected this request previously
+  const prevSnap = await db
+    .collection("notifications")
+    .where("requestId", "==", requestId)
+    .get();
+  const bannedRiderIds = new Set<string>();
+  prevSnap.forEach((d) => {
+    const data = d.data() as any;
+    const st = (data?.state ?? "").toString();
+    if (st === "rejected" || st === "cancelled") {
+      const rid = data?.riderId;
+      if (typeof rid === "string" && rid) bannedRiderIds.add(rid);
+    }
+  });
+  const eligibleCandidates = candidates.filter((c) => !bannedRiderIds.has(c.uid));
+
+  if (eligibleCandidates.length === 0) {
     // Tell requester no rider was found
     sendTextToClients(requestId, "No rider found");
     await db.collection("ride_requests").doc(requestId).set(
       {
         state: "timeout",
-        timeoutReason: "no_idle_riders",
+        timeoutReason: candidates.length === 0 ? "no_idle_riders" : "no_eligible_riders",
         timedOutAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }
@@ -557,83 +573,103 @@ async function assignRideToNearestRiders(
     return;
   }
 
-  // 1) Create notifications for all candidates (distance-sorted) and set rider_state=requested
-  const notifRefs: { id: string; riderId: string }[] = [];
-  for (const c of candidates) {
-    const notifRef = db.collection("notifications").doc();
-    notifRefs.push({ id: notifRef.id, riderId: c.uid });
-    await Promise.all([
-      notifRef.set({
-        id: notifRef.id,
-        requestId,
-        riderId: c.uid,
-        rider: {
-          uid: c.uid,
-          name: c.name,
-          location: new admin.firestore.GeoPoint(c.lat, c.lng),
-        },
-        state: "active",
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        ride: {
-          timestamp: admin.firestore.Timestamp.fromMillis(ride.timestampMs),
-          location: new admin.firestore.GeoPoint(
-            ride.location.lat,
-            ride.location.lng
-          ),
-          destination: new admin.firestore.GeoPoint(
-            ride.destination.lat,
-            ride.destination.lng
-          ),
-        },
-      }),
-      db.collection("rider_state").doc(c.uid).set(
-        {
-          state: "requested",
-          requestId,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      ),
-    ]);
-  }
-
-  // 2) Schedule per-notification timeout (10s) to mark non-responded as "timeout"
+  // 1) Create notifications for candidates sequentially (distance-sorted) with 3s gap
   const timeoutTimers: NodeJS.Timeout[] = [];
-  for (const { id, riderId } of notifRefs) {
-    const t = setTimeout(async () => {
-      // If still active after 10s, mark timeout and reset rider to idle
-      const ref = db.collection("notifications").doc(id);
-      const snap = await ref.get();
-      const st = (snap.data() as any)?.state;
-      if (st === "active") {
-        await Promise.all([
-          ref.set(
-            {
-              state: "timeout",
-              resolvedAt: admin.firestore.FieldValue.serverTimestamp(),
-            },
-            { merge: true }
-          ),
-          db.collection("rider_state").doc(riderId).set(
-            {
-              state: "idle",
-              requestId: admin.firestore.FieldValue.delete(),
-              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            },
-            { merge: true }
-          ),
-        ]);
-      }
-    }, PER_RIDER_TIMEOUT_MS);
-    timeoutTimers.push(t);
-  }
+  const scheduleTimers: NodeJS.Timeout[] = [];
+  let sendIndex = 0;
+  let settled = false;
+
+  const sendToNext = async () => {
+    if (settled) return;
+    // Skip over any banned riders (defensive; eligibleCandidates already filtered)
+    while (sendIndex < eligibleCandidates.length && bannedRiderIds.has(eligibleCandidates[sendIndex].uid)) {
+      sendIndex++;
+    }
+    if (sendIndex >= eligibleCandidates.length) return;
+    const c = eligibleCandidates[sendIndex++];
+    try {
+      const notifRef = db.collection("notifications").doc();
+      await Promise.all([
+        notifRef.set({
+          id: notifRef.id,
+          requestId,
+          riderId: c.uid,
+          rider: {
+            uid: c.uid,
+            name: c.name,
+            location: new admin.firestore.GeoPoint(c.lat, c.lng),
+          },
+          state: "active",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          ride: {
+            timestamp: admin.firestore.Timestamp.fromMillis(ride.timestampMs),
+            location: new admin.firestore.GeoPoint(
+              ride.location.lat,
+              ride.location.lng
+            ),
+            destination: new admin.firestore.GeoPoint(
+              ride.destination.lat,
+              ride.destination.lng
+            ),
+          },
+        }),
+        db.collection("rider_state").doc(c.uid).set(
+          {
+            state: "requested",
+            requestId,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        ),
+      ]);
+      // Per-notification timeout (10s)
+      const to = setTimeout(async () => {
+        const ref = db.collection("notifications").doc(notifRef.id);
+        const snap = await ref.get();
+        const st = (snap.data() as any)?.state;
+        if (st === "active") {
+          await Promise.all([
+            ref.set(
+              {
+                state: "timeout",
+                resolvedAt: admin.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true }
+            ),
+            db.collection("rider_state").doc(c.uid).set(
+              {
+                state: "idle",
+                requestId: admin.firestore.FieldValue.delete(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true }
+            ),
+          ]);
+        }
+      }, PER_RIDER_TIMEOUT_MS);
+      timeoutTimers.push(to);
+    } catch (e) {
+      console.error("[assign] failed to notify candidate", c.uid, e);
+    }
+    // Schedule next candidate after 3 seconds if not settled
+    if (!settled && sendIndex < eligibleCandidates.length) {
+      const t = setTimeout(() => {
+        sendToNext().catch((err) =>
+          console.error("[assign] next candidate error", err)
+        );
+      }, 3_000);
+      scheduleTimers.push(t);
+    }
+  };
+  // kick off first candidate immediately
+  await sendToNext();
 
   // 3) Watch for first acceptance within 60s
-  let settled = false;
   const cleanup = () => {
     if (settled) return;
     settled = true;
     timeoutTimers.forEach(clearTimeout);
+    scheduleTimers.forEach(clearTimeout);
     notifUnsub();
     try {
       inFlightRequests.delete(requestId);
@@ -676,7 +712,7 @@ async function assignRideToNearestRiders(
     if (!ok) return; // some other acceptance already finalized
 
     // Attach rider details to the accepted ride_request
-    const winner = candidates.find((c) => c.uid === accepted.riderId);
+    const winner = eligibleCandidates.find((c) => c.uid === accepted.riderId);
     if (winner) {
       await db
         .collection("ride_requests")

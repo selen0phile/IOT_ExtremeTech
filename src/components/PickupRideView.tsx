@@ -659,7 +659,7 @@ export default function PickupRideView() {
             <Button
               size="default"
               onClick={handleConfirm}
-              disabled={!distanceToPickup || distanceToPickup >= 10}
+              disabled={!distanceToPickup || distanceToPickup >= 15}
               style={{
                 marginTop: 8,
                 background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -733,7 +733,7 @@ export default function PickupRideView() {
             <Button
               size="default"
               onClick={() => completeRide()}
-              disabled={!distanceToDestination || distanceToDestination >= 10}
+              disabled={!distanceToDestination || distanceToDestination >= 15}
               style={{
                 marginTop: 8,
                 background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
