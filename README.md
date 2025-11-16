@@ -1,74 +1,139 @@
-# React + TypeScript + Vite
+# Rixa
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + TypeScript + Vite app. This README shows exactly how to install, run, build, and preview the project on Windows, macOS, and Linux.
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js LTS (v18 or newer recommended). Install from the official site: [Node.js](https://nodejs.org/en)
+- npm comes with Node. If you prefer, you can use `pnpm` or `yarn`.
 
-## React Compiler
+Check your versions:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+node -v
+npm -v
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Quick Start
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# 1) Install dependencies
+npm install
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 2) Start the dev server (with HMR)
+npm run dev
 ```
-"# rixa" 
+
+By default Vite serves at `http://localhost:5173`. The terminal will show the exact URL.
+
+## Common Scripts
+
+- `npm run dev` – Start local dev server with hot reloading
+- `npm run build` – Production build to the `dist/` folder
+- `npm run preview` – Preview the production build locally
+
+If you use `pnpm` or `yarn`, replace `npm run` with `pnpm` or `yarn` equivalents:
+
+```bash
+pnpm install
+pnpm dev
+pnpm build
+pnpm preview
+```
+
+## Project Structure (typical Vite + React)
+
+```
+.
+├─ public/                # Static assets copied as-is
+├─ src/
+│  ├─ assets/            # Images, fonts, etc.
+│  ├─ components/        # React components
+│  ├─ App.tsx
+│  ├─ main.tsx
+│  └─ vite-env.d.ts
+├─ index.html
+├─ package.json
+├─ tsconfig*.json
+├─ vite.config.ts
+└─ README.md
+```
+
+## Environment Variables (optional)
+
+Vite uses the `import.meta.env` system. To add variables:
+
+1. Create a file like `.env.local` in the project root.
+2. Prefix variables with `VITE_` to expose them to the client.
+
+Example:
+
+```bash
+# .env.local
+VITE_API_BASE_URL=https://api.example.com
+```
+
+Access in code:
+
+```ts
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+```
+
+### Google Maps API key (required for maps)
+
+The app uses Google Maps (e.g., in pickup/ride views and the admin dashboard). You must provide a Maps JavaScript API key:
+
+1. Create `.env.local` and set:
+
+```bash
+# .env.local
+VITE_GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_JS_API_KEY
+```
+
+2. Alternatively, the code also checks `GOOGLE_MAPS_API_KEY` for compatibility:
+
+```bash
+GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_JS_API_KEY
+```
+
+Notes:
+
+- Enable “Maps JavaScript API” for your project in Google Cloud Console.
+- Restrict the key to your domain(s) (HTTP referrer) for security.
+- Components load the key via `useLoadScript` (see `src/components/PickupRideView.tsx`, `src/pages/Admin.tsx`).
+
+## Building for Production
+
+```bash
+npm run build
+```
+
+Outputs a production bundle to `dist/`. You can deploy `dist/` to any static host (e.g., Netlify, Vercel, GitHub Pages, Nginx).
+
+Preview the build locally:
+
+```bash
+npm run preview
+```
+
+## Troubleshooting
+
+- Port already in use:
+  - Use a different port: `npm run dev -- --port 5174`
+  - Or stop the process using the port and retry.
+- Node version issues:
+  - Ensure Node 18+ with `node -v`. Use [nvm](https://github.com/coreybutler/nvm-windows) (Windows) or [nvm-sh](https://github.com/nvm-sh/nvm) (macOS/Linux) to switch versions.
+- Corporate proxy/firewall:
+  - Configure `HTTP_PROXY`/`HTTPS_PROXY` env vars before `npm install`.
+- Blank screen or build errors:
+  - Clear cache and reinstall: `rm -rf node_modules .vite` (PowerShell: `rd /s /q node_modules`) then `npm install`.
+
+## Deploying
+
+- Vercel: Import the repo; framework = Vite; build = `npm run build`; output = `dist`.
+- Netlify: Build command `npm run build`; publish directory `dist`.
+- Any static server: Serve the `dist/` directory after `npm run build`.
+
+---
+
+If you run into problems, please include your OS, Node version, and the exact command output when asking for help.
