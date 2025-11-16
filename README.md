@@ -2,6 +2,10 @@
 
 A React + TypeScript + Vite app. This README shows exactly how to install, run, build, and preview the project on Windows, macOS, and Linux.
 
+# Demo URL
+
+https://rixa2-8042b.web.app
+
 ## Prerequisites
 
 - Node.js LTS (v18 or newer recommended). Install from the official site: [Node.js](https://nodejs.org/en)
